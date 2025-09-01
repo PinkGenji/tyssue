@@ -152,12 +152,11 @@ class EulerSolver:
             / self.eptm.vert_df.loc[self.eptm.active_verts, "viscosity"].values[:, None]
         ).ravel()
 
-    def single_step_movement(self, tf, dt):
+    def single_step_movement(self, dt):
         """Solves and returns the final movement vector for a single step of the Euler solver defined above.
 
         Parameters
         ----------
-        tf : float, final time when we stop solving
         dt : float, time step
         on_topo_change : function, optional, default None
              function of `self.eptm`
@@ -165,7 +164,7 @@ class EulerSolver:
 
         """
         self.eptm.settings["dt"] = dt
-        for t in np.arange(self.prev_t, tf + dt, dt):
+        for t in np.arange(self.prev_t, dt, dt):
             pos = self.current_pos
             dot_r = self.ode_func(t, pos)
             if self.bounds is not None:
