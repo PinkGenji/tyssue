@@ -8,6 +8,7 @@ import logging
 
 from ...geometry.sheet_geometry import SheetGeometry
 from ...topology.sheet_topology import cell_division
+from ...topology.base_topology import drop_face
 from ...utils.decorators import face_lookup
 from .actions import (
     decrease,
@@ -248,3 +249,19 @@ def contraction_line_tension(sheet, manager, **kwargs):
         isotropic=True,
         limit=100,
     )
+
+
+def T2Swap(sheet, manager, face_id, crit_area):
+    """
+    A behaviour function of the T2 transition that should be added to the manager during simulation.
+    It removes the face with cell_id is triangular and its area is smaller than crit_area.
+    """
+    if (sheet.face_df.loc[face_id,'num_sides']) < 4 and sheet.face_df.loc[face_id, 'area'] < crit_area:
+        drop_face(sheet, face_id)
+        print(f'Removed face {face_id}')
+    else:
+        # Use the stable `id` column instead of relying on positional index
+        stable_id = sheet.face_df.loc[face_id, 'id']
+        manager.append(T2Swap, cell_id=stable_id, crit_area=crit_area)
+
+
