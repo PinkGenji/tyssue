@@ -57,7 +57,7 @@ def split_vert(
     return new_edges
 
 
-def type1_transition(sheet, edge01, *, remove_tri_faces=True, multiplier=1.5):
+def type1_transition(sheet, edge01, *, do_reindex =True, remove_tri_faces=True, multiplier=1.5):
     """Performs a type 1 transition around the edge edge01
 
     See ../../doc/illus/t1_transition.png for a sketch of the definition
@@ -86,7 +86,7 @@ def type1_transition(sheet, edge01, *, remove_tri_faces=True, multiplier=1.5):
     srce, trgt, face = sheet.edge_df.loc[edge01, ["srce", "trgt", "face"]].astype(int)
 
     vert = min(srce, trgt)  # find the vertex that won't be reindexed
-    ret_code = collapse_edge(sheet, edge01, reindex=True, allow_two_sided=True)
+    ret_code = collapse_edge(sheet, edge01, reindex=do_reindex, allow_two_sided=True)
     if ret_code < 0:
         warnings.warn(f"Collapse of edge {edge01} failed")
         return ret_code
@@ -96,7 +96,7 @@ def type1_transition(sheet, edge01, *, remove_tri_faces=True, multiplier=1.5):
         vert,
         face,
         multiplier=multiplier,
-        reindex=True,
+        reindex=do_reindex,
         recenter=True,
     )
 
