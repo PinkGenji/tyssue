@@ -183,6 +183,14 @@ def drop_two_sided_faces(eptm):
     eptm.face_df.drop(two_sided, axis=0, inplace=True)
 
 
+def drop_face(sheet, face, **kwargs):
+    """
+    Removes the face indexed by "face" and all associated edges
+    """
+    edge = sheet.edge_df.loc[(sheet.edge_df['face'] == face)].index
+    print(f"Dropping face '{face}'")
+    sheet.remove(edge, **kwargs)
+
 def remove_face(sheet, face):
     """Removes a face from the mesh.
 
