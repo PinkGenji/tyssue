@@ -570,7 +570,8 @@ class Epithelium:
         return orbits
 
     def idx_lookup(self, elem_id, element):
-        """returns the current index of the element with the `"id"` column equal to `elem_id`
+        """returns the current index of the element with the `"id"` column equal to `elem_id`;
+        thse stable IDs are called "ID" in face data frame, but called "unique_id" in vertex and edge data frames
 
         Parameters
         ----------
@@ -579,7 +580,10 @@ class Epithelium:
         element : {"vert"|"edge"|"face"|"cell"}
           the corresponding dataset.
         """
-        df = self.datasets[element]["id"]
+        if element == "vert" or element == "edge":
+            df = self.datasets[element]['unique_id']
+        else:
+            df = self.datasets[element]["id"]
         idx = df[df == elem_id].index
         if len(idx):
             return idx[0]
