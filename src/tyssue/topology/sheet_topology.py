@@ -70,16 +70,14 @@ def type1_transition(sheet, edge01, *, do_reindex =True, remove_tri_faces=True, 
     sheet : a `Sheet` instance
     edge_01 : int
        index of the edge around which the transition takes place
-    epsilon : float, optional, deprecated
-       default 0.1, the initial length of the new edge, in case "threshold_length"
-       is not in the sheet.settings
+    do_reindex : bool, optional
+        whether or not to reindex  the sheet.
     remove_tri_faces : bool, optional
        if True (the default), will remove triangular cells
        after the T1 transition is performed
     multiplier : float, optional
        default 1.5, the multiplier to the threshold length, so that the
        length of the new edge is set to multiplier * threshold_length
-
 
     """
 
