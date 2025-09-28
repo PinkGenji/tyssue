@@ -580,7 +580,7 @@ class Epithelium:
         element : {"vert"|"edge"|"face"|"cell"}
           the corresponding dataset.
         """
-        if element == "vert" or element == "edge":
+        if element in ['vert', 'edge','face']:
             df = self.datasets[element]['unique_id']
         else:
             df = self.datasets[element]["id"]
