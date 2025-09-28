@@ -259,7 +259,7 @@ def T1Swap(sheet,manager, geom, stable_face, T1_threshold, multiplier, crit_area
     face_id = sheet.idx_lookup(stable_face, "face")
     # If the polygon has less than 4 sides, we append it to T2 swap.
     if sheet.face_df.loc[face_id,'num_sides'] < 4:
-        manager.append(T2Swap, face_id=face_id, crit_area=crit_area)
+        manager.append(T2Swap, face_id=stable_face, crit_area=crit_area)
     else:
         # If the polygon has more than 3 sides, then we perform t1 transition of its edges according to length.
         edges_df = sheet.edge_df[sheet.edge_df["face"] == face_id]
@@ -270,7 +270,7 @@ def T1Swap(sheet,manager, geom, stable_face, T1_threshold, multiplier, crit_area
             else:
                 continue
         # After the edge length loop, append the polygon to the manager for next time step.
-        manager.append(T1Swap, face_id=face_id, T1_threshold= T1_threshold, multiplier = multiplier, crit_area=crit_area)
+        manager.append(T1Swap, face_id=stable_face, T1_threshold= T1_threshold, multiplier = multiplier, crit_area=crit_area)
 
 
 
@@ -290,6 +290,6 @@ def T2Swap(sheet, manager, stable_face, crit_area):
     else:
         # Use the stable `id` column instead of relying on positional index
         stable_id = sheet.face_df.loc[face_id, 'id']
-        manager.append(T2Swap, face_id=face_id, crit_area=crit_area)
+        manager.append(T2Swap, face_id=stable_face, crit_area=crit_area)
 
 

@@ -8,7 +8,7 @@ import numpy as np
 from ...geometry.planar_geometry import PlanarGeometry
 from ...topology.sheet_topology import cell_division
 
-def cell_cycle_transition(sheet, manager, dt, face_id, p_recruit=0.1, G2_duration=0.4, G1_duration=0.11):
+def cell_cycle_transition(sheet, manager, dt, stable_face, p_recruit=0.1, G2_duration=0.4, G1_duration=0.11):
     """
     Controls cell class state transitions for cell cycle based on timers and probabilities.
 
@@ -29,7 +29,8 @@ def cell_cycle_transition(sheet, manager, dt, face_id, p_recruit=0.1, G2_duratio
     G1_duration: float
         Fixed duration cells stay in G1 phase.
     """
-
+    # First, we need to look up the current index of stable_face in face_df.
+    face_id = sheet.idx_lookup(stable_face, "face")
     # Record the current cell class
     current_class = sheet.face_df.loc[face_id, 'cell_class']
     # (1) Recruit mature 'S' cells into G2 with probability p_recruit
@@ -66,7 +67,7 @@ def cell_cycle_transition(sheet, manager, dt, face_id, p_recruit=0.1, G2_duratio
         if sheet.face_df.loc[face_id, 'timer'] <= 0:
             sheet.face_df.loc[face_id, 'cell_class'] = 'S'
         # append to next deque
-        manager.append(cell_cycle_transition, dt=dt, face_id=face_id)
+        manager.append(cell_cycle_transition, dt=dt, stable_face= stable_face)
 
 
 
