@@ -206,7 +206,7 @@ def face_division(sheet, mother, vert_a, vert_b):
     sheet.face_df = pd.concat([sheet.face_df, face_cols], ignore_index=True)
     sheet.face_df.index.name = "face"
     daughter = int(sheet.face_df.index[-1])
-
+    sheet.face_df.loc[daughter, 'unique_id'] = sheet.face_df['unique_id'].max() + 1
     edge_cols = sheet.edge_df[sheet.edge_df["face"] == mother].iloc[0:1]
 
     sheet.edge_df = pd.concat([sheet.edge_df, edge_cols, edge_cols], ignore_index=True)
