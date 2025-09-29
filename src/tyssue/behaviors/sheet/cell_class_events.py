@@ -51,7 +51,8 @@ def cell_cycle_transition(sheet, manager, dt, face_id, p_recruit=0.1, G2_duratio
 
     # (3) For cells in M, perform division and set daughters to G1 with timer
     elif current_class == 'M':
-        daughter = cell_division(sheet, mother=face_id, geom = PlanarGeometry )
+        # Make sure we pass the variable idx for cell division.
+        daughter = cell_division(sheet, mother=idx, geom = PlanarGeometry )
         # Set parent and daughter to G1 with G1 timer, note that variable daughter is the index of the new row already.
         sheet.face_df.loc[idx, 'cell_class'] = 'G1'
         sheet.face_df.loc[daughter, 'cell_class'] = 'G1'
