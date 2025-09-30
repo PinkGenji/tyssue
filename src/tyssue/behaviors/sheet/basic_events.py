@@ -251,45 +251,45 @@ def contraction_line_tension(sheet, manager, **kwargs):
     )
 
 
-def T1Swap(sheet,manager, geom, stable_face, T1_threshold, multiplier, crit_area):
+def T1Swap(sheet,manager, geom, face_id, T1_threshold, multiplier, crit_area):
     """
     A behaviour function of the T1 transition that performs a T1 swap on an edge that is shorter than T1_threshold.
     """
-    # First, we need to look up the current index of stable_face in face_df.
-    face_id = sheet.idx_lookup(stable_face, "face")
+    # First, we need to look up the current index of the face with face ID.
+    idx = sheet.idx_lookup(face_id, "face")
     # If the polygon has less than 4 sides, we append it to T2 swap.
-    if sheet.face_df.loc[face_id,'num_sides'] < 4:
-        manager.append(T2Swap, face_id=stable_face, crit_area=crit_area)
+    if sheet.face_df.loc[idx,'num_sides'] < 4:
+        manager.append(T2Swap, face_id=face_id, crit_area=crit_area)
     else:
         # If the polygon has more than 3 sides, then we perform t1 transition of its edges according to length.
         edges_df = sheet.edge_df[sheet.edge_df["face"] == face_id]
-        for idx in edges_df.index:
+        for i in edges_df.index:
             if edges_df.loc[i,'length'] < T1_threshold:
-                T1_transition(sheet, idx, do_reindex=False, remove_tri_faces=False, multiplier=multiplier)
+                T1_transition(sheet, i, do_reindex=False, remove_tri_faces=False, multiplier=multiplier)
                 geom.update_all(sheet)
             else:
                 continue
         # After the edge length loop, append the polygon to the manager for next time step.
-        manager.append(T1Swap, face_id=stable_face, T1_threshold= T1_threshold, multiplier = multiplier, crit_area=crit_area)
+        manager.append(T1Swap, face_id=face_id, T1_threshold= T1_threshold, multiplier = multiplier, crit_area=crit_area)
 
 
 
-def T2Swap(sheet, manager, stable_face, crit_area):
+def T2Swap(sheet, manager, face_id, crit_area):
     """
     A behaviour function of the T2 transition that should be added to the manager during simulation.
     It removes the face with stable_face (unique ID) is triangular and its area is smaller than crit_area.
     """
     # First, we need to look up the current index of stable_face in face_df.
-    face_id = sheet.idx_lookup(stable_face, "face")
-    if (sheet.face_df.loc[face_id,'num_sides']) == 3 and sheet.face_df.loc[face_id, 'area'] < crit_area:
-        drop_face(sheet, face_id)
-        print(f'Removed triangular face {face_id}')
-    elif sheet.face_df.loc[face_id,'num_sides'] < 3:
-        drop_face(sheet, face_id)
-        print(f'Removed invalid face {face_id}')
+    idx = sheet.idx_lookup(face_id, "face")
+    if (sheet.face_df.loc[idx,'num_sides']) == 3 and sheet.face_df.loc[idx, 'area'] < crit_area:
+        drop_face(sheet, idx)
+        print(f'Removed triangular face ID: {face_id}')
+    elif sheet.face_df.loc[idx,'num_sides'] < 3:
+        drop_face(sheet, idx)
+        print(f'Removed invalid face ID: {face_id}')
     else:
         # Use the stable `id` column instead of relying on positional index
-        stable_id = sheet.face_df.loc[face_id, 'id']
-        manager.append(T2Swap, face_id=stable_face, crit_area=crit_area)
+        face_id = sheet.face_df.loc[face_id, 'unique_id']
+        manager.append(T2Swap, face_id=face_id, crit_area=crit_area)
 
 
