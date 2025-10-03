@@ -251,7 +251,7 @@ def contraction_line_tension(sheet, manager, **kwargs):
     )
 
 
-def T1Swap(sheet,manager, geom, face_id, T1_threshold, multiplier, crit_area):
+def T1Swap(sheet,manager, face_id, geom, t1_threshold, multiplier, crit_area):
     """
     A behaviour function of the T1 transition that performs a T1 swap on an edge that is shorter than T1_threshold.
     """
@@ -262,15 +262,16 @@ def T1Swap(sheet,manager, geom, face_id, T1_threshold, multiplier, crit_area):
         manager.append(T2Swap, face_id=face_id, crit_area=crit_area)
     else:
         # If the polygon has more than 3 sides, then we perform t1 transition of its edges according to length.
-        edges_df = sheet.edge_df[sheet.edge_df["face"] == face_id]
+        edges_df = sheet.edge_df[sheet.edge_df["face"] == idx]
         for i in edges_df.index:
-            if edges_df.loc[i,'length'] < T1_threshold:
+            if edges_df.loc[i,'length'] < t1_threshold:
                 T1_transition(sheet, i, do_reindex=False, remove_tri_faces=False, multiplier=multiplier)
                 geom.update_all(sheet)
+                print(f'Performed T1 swap on face with unique ID: {face_id}')
             else:
                 continue
         # After the edge length loop, append the polygon to the manager for next time step.
-        manager.append(T1Swap, face_id=face_id, T1_threshold= T1_threshold, multiplier = multiplier, crit_area=crit_area)
+        manager.append(T1Swap, face_id=face_id, geom = geom, t1_threshold = t1_threshold, multiplier = multiplier, crit_area=crit_area)
 
 
 
@@ -283,10 +284,10 @@ def T2Swap(sheet, manager, face_id, crit_area):
     idx = sheet.idx_lookup(face_id, "face")
     if (sheet.face_df.loc[idx,'num_sides']) == 3 and sheet.face_df.loc[idx, 'area'] < crit_area:
         drop_face(sheet, idx)
-        print(f'Removed triangular face ID: {face_id}')
+        print(f'Removed triangular face with unique ID: {face_id}')
     elif sheet.face_df.loc[idx,'num_sides'] < 3:
         drop_face(sheet, idx)
-        print(f'Removed invalid face ID: {face_id}')
+        print(f'Removed invalid face with unique ID: {face_id}')
     else:
         # Use the stable `id` column instead of relying on positional index
         face_id = sheet.face_df.loc[face_id, 'unique_id']
