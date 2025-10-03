@@ -122,6 +122,8 @@ class EulerSolver:
             self.prev_t = t
             if self.manager is not None:
                 self.manager.execute(self.eptm)
+                self.eptm.reset_index()
+                self.eptm.reset_topo()
                 self.geom.update_all(self.eptm)
                 self.manager.update()
 
