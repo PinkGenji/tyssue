@@ -251,28 +251,24 @@ def contraction_line_tension(sheet, manager, **kwargs):
     )
 
 
-def T1Swap(sheet,manager, face_id, geom, t1_threshold, multiplier, crit_area):
+def T1Swap(sheet,manager, t1_threshold, multiplier):
     """
     A behaviour function of the T1 transition that performs a T1 swap on an edge that is shorter than T1_threshold.
     """
-    # First, we need to look up the current index of the face with face ID.
-    idx = sheet.idx_lookup(face_id, "face")
-    # If the polygon has less than 4 sides, we append it to T2 swap.
-    if sheet.face_df.loc[idx,'num_sides'] < 4:
-        manager.append(T2Swap, face_id=face_id, crit_area=crit_area)
-    else:
-        # If the polygon has more than 3 sides, then we perform t1 transition of its edges according to length.
-        edges_df = sheet.edge_df[sheet.edge_df["face"] == idx]
-        for i in edges_df.index:
-            if edges_df.loc[i,'length'] < t1_threshold:
-                T1_transition(sheet, i, do_reindex=False, remove_tri_faces=False, multiplier=multiplier)
-                geom.update_all(sheet)
-                print(f'Performed T1 swap on face with unique ID: {face_id}')
-            else:
-                continue
-        # After the edge length loop, append the polygon to the manager for next time step.
-        manager.append(T1Swap, face_id=face_id, geom = geom, t1_threshold = t1_threshold, multiplier = multiplier, crit_area=crit_area)
-
+    # First, we need to get the joint index over free and east edges,
+    # that is, the indices of edges that is spanning the entire graph without double edges
+    sheet.get_extra_indices()
+    edge_dataframe = sheet.edge_df.loc[sheet.sgle_edges]
+    short_edges = edge_dataframe.loc[(edge_dataframe['length'] < t1_threshold)]
+    # take advantage of the unique ID to help us tracking the edges,
+    # we need to reindex the df in type 1 transition function, otherwise there will be inconsistency between
+    # dataframes and will cause out of index error.
+    unique_list = short_edges['unique_id'].tolist()
+    for ID in unique_list:
+        idx = sheet.idx_lookup(ID,'edge')
+        print(f'Performed T1 swap on edge {idx}')
+        T1_transition(sheet, idx, do_reindex=True, remove_tri_faces=False, multiplier=multiplier)
+    manager.append(T1Swap,  t1_threshold = t1_threshold, multiplier = multiplier)
 
 
 def T2Swap(sheet, manager, crit_area):
