@@ -275,22 +275,18 @@ def T1Swap(sheet,manager, face_id, geom, t1_threshold, multiplier, crit_area):
 
 
 
-def T2Swap(sheet, manager, face_id, crit_area):
+def T2Swap(sheet, manager, crit_area):
     """
     A behaviour function of the T2 transition that should be added to the manager during simulation.
-    It removes the face with stable_face (unique ID) is triangular and its area is smaller than crit_area.
+    It removes the face if it is triangular and its area is smaller than crit_area.
     """
-    # First, we need to look up the current index of stable_face in face_df.
-    idx = sheet.idx_lookup(face_id, "face")
-    if (sheet.face_df.loc[idx,'num_sides']) == 3 and sheet.face_df.loc[idx, 'area'] < crit_area:
-        drop_face(sheet, idx)
-        print(f'Removed triangular face with unique ID: {face_id}')
-    elif sheet.face_df.loc[idx,'num_sides'] < 3:
-        drop_face(sheet, idx)
-        print(f'Removed invalid face with unique ID: {face_id}')
-    else:
-        # Use the stable `id` column instead of relying on positional index
-        face_id = sheet.face_df.loc[face_id, 'unique_id']
-        manager.append(T2Swap, face_id=face_id, crit_area=crit_area)
+    face_dataframe = sheet.face_df
+    Face_list = face_dataframe.loc[(face_dataframe['num_sides'] < 4) & (face_dataframe['area'] < crit_area)].index.tolist()
+    print(f'Face list: {Face_list}')
+    for face in Face_list:
+        drop_face(sheet, face)
+    manager.append(T2Swap, crit_area = crit_area)
+
+
 
 
