@@ -64,3 +64,4 @@ def cell_cycle_transition(sheet, manager, dt, p_recruit=0.1, G2_duration=0.4, G1
         sheet.face_df.loc[cell, 'timer'] = G1_duration
         sheet.face_df.loc[daughter, 'timer'] = G1_duration
 
+    manager.append(cell_cycle_transition, dt = dt, p_recruit = p_recruit,G2_duration = G2_duration, G1_duration = G1_duration)
