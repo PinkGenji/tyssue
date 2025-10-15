@@ -8,7 +8,7 @@ import numpy as np
 from ...geometry.planar_geometry import PlanarGeometry
 from ...topology.sheet_topology import cell_division
 
-def cell_cycle_transition(sheet, manager, dt, face_id, p_recruit=0.1, G2_duration=0.4, G1_duration=0.11):
+def cell_cycle_transition(sheet, manager, dt, p_recruit=0.1, G2_duration=0.4, G1_duration=0.11):
     """
     Controls cell class state transitions for cell cycle based on timers and probabilities.
 
@@ -29,52 +29,38 @@ def cell_cycle_transition(sheet, manager, dt, face_id, p_recruit=0.1, G2_duratio
     G1_duration: float
         Fixed duration cells stay in G1 phase.
     """
-    # First, we need to look up the current index of the face with face ID.
-    idx = sheet.idx_lookup(face_id, "face")
-    # Record the current cell class
-    current_class = sheet.face_df.loc[idx, 'cell_class']
-    # (1) Recruit mature 'S' cells into G2 with probability p_recruit
-    if current_class == 'S':
+    # Generate two df that are cells that need to change its cell class or stay in its current class.
+    cells_stay_in_class = sheet.face_df.loc[sheet.face_df['timer'] > 0].index.tolist()
+    cells_to_change = sheet.face_df.loc[sheet.face_df['timer'] <= 0]
+
+    # For cells that still needs to elapse the timer, just reduce the timer by dt
+    for cell in cells_stay_in_class:
+        sheet.face_df.loc[cell,'timer'] -= dt
+
+    # Then we change the cell type based on the cell cycle diagram.
+    G1_cells = cells_to_change.loc[cells_to_change['cell_class'] == 'G1'].index.tolist()
+    S_cells = cells_to_change.loc[cells_to_change['cell_class'] == 'S'].index.tolist()
+    G2_cells = cells_to_change.loc[cells_to_change['cell_class'] == 'G2'].index.tolist()
+    M_cells = cells_to_change.loc[cells_to_change['cell_class'] == 'M'].index.tolist()
+
+    # For cells in G1_cells indices, we simply change the cell class to S
+    sheet.face_df.loc[G1_cells, 'cell_class'] = 'S'
+
+    # For cells in S_cells , we need to loop and decide based on the random number generated for if it moves into G2.
+    for cell in S_cells:
         if np.random.rand() < p_recruit:
-            sheet.face_df.loc[idx, 'cell_class'] = 'G2'
-            sheet.face_df.loc[idx, 'timer'] = G2_duration
-        # append to next deque
-        manager.append(cell_cycle_transition, dt=dt, face_id=face_id)
+            sheet.face_df.loc[cell, 'cell_class'] = 'G2'
+            sheet.face_df.loc[cell, 'timer'] = G2_duration
 
-    # (2) Decrement timers for cells in G2; when timer ends, move to M
-    elif current_class == 'G2':
-        sheet.face_df.loc[idx, 'timer'] -= dt
-        if sheet.face_df.loc[idx, 'timer'] <= 0:
-            sheet.face_df.loc[idx, 'cell_class'] = 'M'
-        # append to next deque
-        manager.append(cell_cycle_transition, dt=dt, face_id=face_id)
+    # For cells in G2_cells, we move them into M class
+    sheet.face_df.loc[G2_cells, 'cell_class'] = 'M'
 
-    # (3) For cells in M, perform division and set daughters to G1 with timer
-    elif current_class == 'M':
-        # Make sure we pass the variable idx for cell division.
-        daughter = cell_division(sheet, mother=idx, geom = PlanarGeometry )
+    # For cells in M_cells, they need to be undergone cell division
+    for cell in M_cells:
+        daughter = cell_division(sheet, mother=cell, geom = PlanarGeometry )
         # Set parent and daughter to G1 with G1 timer, note that variable daughter is the index of the new row already.
-        sheet.face_df.loc[idx, 'cell_class'] = 'G1'
+        sheet.face_df.loc[cell, 'cell_class'] = 'G1'
         sheet.face_df.loc[daughter, 'cell_class'] = 'G1'
-        sheet.face_df.loc[idx, 'timer'] = G1_duration
+        sheet.face_df.loc[cell, 'timer'] = G1_duration
         sheet.face_df.loc[daughter, 'timer'] = G1_duration
-        # append to next deque
-        manager.append(cell_cycle_transition, dt=dt, face_id=face_id)
-        # look up the unique id of daughter, then append.
-        daughter_id = sheet.face_df.loc[daughter, 'unique_id']
-        print(f'daughter index {daughter} with unique ID: {daughter_id} is generated....')
-        manager.append(cell_cycle_transition, dt=dt, face_id=daughter_id)
-
-    # (4) Decrement timers for G1 cells; when timer ends, move to S
-    elif current_class == 'G1':
-        sheet.face_df.loc[idx, 'timer'] -= dt
-        if sheet.face_df.loc[idx, 'timer'] <= 0:
-            sheet.face_df.loc[idx, 'cell_class'] = 'S'
-        # append to next deque
-        manager.append(cell_cycle_transition, dt=dt, face_id = face_id)
-
-
-
-
-
 
