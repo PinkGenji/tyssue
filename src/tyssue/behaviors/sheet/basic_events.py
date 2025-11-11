@@ -278,7 +278,6 @@ def T2Swap(sheet, manager, crit_area):
     """
     face_dataframe = sheet.face_df
     Face_list = face_dataframe.loc[(face_dataframe['num_sides'] < 4) & (face_dataframe['area'] < crit_area)].index.tolist()
-    print(f'Face list: {Face_list}')
     for face in Face_list:
         drop_face(sheet, face)
     manager.append(T2Swap, crit_area = crit_area)
