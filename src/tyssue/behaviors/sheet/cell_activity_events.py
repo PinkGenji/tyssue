@@ -17,20 +17,20 @@ smaller than the threshold value, then the target area is added by "growth_rate 
 """
 # Note: still needs to improve the function, so it controls cell class change.
 def proliferation(sheet, manager, geom, unique_id, crit_area, growth_rate, dt):
-    idx = sheet.idx_lookup('face', unique_id)
+    idx = sheet.idx_lookup(unique_id,'face') # get the current face index from unique_id.
     if sheet.face_df.loc[idx, "area"] > crit_area:
         # restore prefered_area
         sheet.face_df.loc[idx, "prefered_area"] = 1.0
         # Do division
-        daughter = cell_division(sheet, cell_id, geom)
+        daughter = cell_division(sheet, idx, geom)
         # Update the topology
         sheet.reset_index(order=True)
         # update geometry
-        sgeom.update_all(sheet)
+        geom.update_all(sheet)
         print(f"cell n°{daughter} is born")
     else:
         sheet.face_df.loc[idx, "prefered_area"] *= (1 + dt * growth_rate)
-        manager.append(division, geom = geom, unique_id = unique_id, crit_area = crit_area, growth_rate = growth_rate, dt = dt)
+        manager.append(proliferation, geom = geom, unique_id = unique_id, crit_area = crit_area, growth_rate = growth_rate, dt = dt)
 
 
 """cell fusion behaviour function
