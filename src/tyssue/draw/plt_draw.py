@@ -129,7 +129,39 @@ def create_gif(
         plt.close(fig)
 
     try:
-        subprocess.run(["convert", (graph_dir / "movie_*.png").as_posix(), output])
+        # Expand pixels manually (cross-platform safe)
+        pngs = sorted(graph_dir.glob("movie_*.png"))
+        png_paths = [str(p) for p in pngs]
+
+        # Detect the correct ImageMagick executable:
+        # IM6: convert
+        # IM7: magick convert
+        def find_imagemagick():
+            # Try IM7 first
+            try:
+                subprocess.run(["magick", "-version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                return ["magick", "convert"]
+            except Exception:
+                pass
+
+            # Try IM6
+            try:
+                subprocess.run(["convert", "-version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                return ["convert"]
+            except Exception:
+                pass
+
+            raise RuntimeError("ImageMagick executable not found on this system.")
+
+        im_cmd = find_imagemagick()
+
+        # Run ImageMagick safely
+        try:
+            subprocess.run(im_cmd + png_paths + [output], check=True)
+        except Exception as e:
+            print("Converting didn't work. Make sure ImageMagick is correctly installed.")
+            raise e
+
     except Exception as e:
         print(
             "Converting didn't work, make sure imagemagick is available on your system"
