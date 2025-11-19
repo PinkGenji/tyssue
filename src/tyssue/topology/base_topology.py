@@ -183,7 +183,7 @@ def drop_two_sided_faces(eptm):
     eptm.face_df.drop(two_sided, axis=0, inplace=True)
 
 
-def delete_face(sheet, face, **kwargs):
+def drop_face(sheet, face, **kwargs):
     """
     Removes the face indexed by "face" and all associated edges
     """
