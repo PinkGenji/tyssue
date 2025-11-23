@@ -251,7 +251,7 @@ def contraction_line_tension(sheet, manager, **kwargs):
     )
 
 
-def T1Swap(sheet,manager, t1_threshold, multiplier):
+def T1Swap(sheet,manager, geom, t1_threshold, multiplier):
     """
     A behaviour function of the T1 transition that performs a T1 swap on an edge that is shorter than T1_threshold.
     """
@@ -268,7 +268,9 @@ def T1Swap(sheet,manager, t1_threshold, multiplier):
         idx = sheet.idx_lookup(ID,'edge')
         print(f'Performed T1 swap on edge {idx}')
         T1_transition(sheet, idx, do_reindex=True, remove_tri_faces=False, multiplier=multiplier)
-    manager.append(T1Swap,  t1_threshold = t1_threshold, multiplier = multiplier)
+        sheet.reset_index()     # removes disconnected vertices and faces
+        geom.update_all(sheet)
+    manager.append(T1Swap, geom= geom, t1_threshold = t1_threshold, multiplier = multiplier)
 
 
 def T2Swap(sheet, manager, crit_area):
