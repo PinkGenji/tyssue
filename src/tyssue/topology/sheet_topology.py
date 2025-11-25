@@ -35,14 +35,15 @@ def split_vert(
     if face is None:
         face = np.random.choice(sheet.edge_df[sheet.edge_df["srce"] == vert]["face"])
 
-    face_edges = sheet.edge_df.query(f"face == {face}")
-    (prev_v,) = face_edges[face_edges["trgt"] == vert]["srce"]
-    (next_v,) = face_edges[face_edges["srce"] == vert]["trgt"]
+    face_edges = sheet.edge_df.query(f"face == {face}")     # A filerted view of the edge_df, contains only the edges belonging to the given face.
+    (prev_v,) = face_edges[face_edges["trgt"] == vert]["srce"]  # The vertex connects into vert (the sources of the edges that whose target is vert).
+    (next_v,) = face_edges[face_edges["srce"] == vert]["trgt"]  # The vertex connects out of vert (the targets of the edges whose source is vert).
+    # A filtered view of the edge_df, contains all edges that touch either prev_v or next_v, regardless of face.
     connected = sheet.edge_df[
         sheet.edge_df["trgt"].isin((next_v, prev_v))
         | sheet.edge_df["srce"].isin((next_v, prev_v))
     ]
-
+    # pass the filtered subset of edge_df as connected to rewire.
     base_split_vert(sheet, vert, face, connected, epsilon, recenter)
     new_edges = []
     for face_ in connected["face"]:

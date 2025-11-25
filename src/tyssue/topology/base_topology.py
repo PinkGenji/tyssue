@@ -14,6 +14,7 @@ def split_vert(sheet, vert, face, to_rewire, epsilon, recenter=False):
     """Creates a new vertex and moves it towards the center of face.
 
     The edges in to_rewire will be connected to the new vertex.
+    This is the low-level function called by topologies when splitting vertices and rewiring edges.
 
     Parameters
     ----------
@@ -48,7 +49,10 @@ def split_vert(sheet, vert, face, to_rewire, epsilon, recenter=False):
     else:
         sheet.vert_df.loc[new_vert, sheet.coords] += shift
 
-    # rewire
+    # rewire the edges.
+    # Updates the rows in the original edge_df at the same indices as to_rewire.
+    # The replacement is done such that any occurrence of 'vert' in the 'srce' column or 'trgt' column of to_rewire
+    # is replaced with new_vert.
     sheet.edge_df.loc[to_rewire.index] = to_rewire.replace(
         {"srce": vert, "trgt": vert}, new_vert
     )
