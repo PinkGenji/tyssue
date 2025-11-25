@@ -148,23 +148,26 @@ def close_face(eptm, face):
     faces. Returns the index of the new edge if created, otherwise None
     """
     logger.debug(f"closing face {face}")
+    # Collects all edges of the face.
     face_edges = eptm.edge_df[eptm.edge_df["face"] == face]
     srces = set(face_edges["srce"])
     trgts = set(face_edges["trgt"])
-
+    # If the set of sources equals the set of targets, every vertex has both incoming and outgoing edges, then the loop is complete.
     if srces == trgts:
         logger.debug("Face %d already closed", face)
         return None
     try:
-        (single_srce,) = srces.difference(trgts)
-        (single_trgt,) = trgts.difference(srces)
+        (single_srce,) = srces.difference(trgts)    # vertices that only appear as sources (no incoming edge).
+        (single_trgt,) = trgts.difference(srces)    # vertices that only appear as targets (no outgoing edge).
     except ValueError as err:
         print("Closing only possible with exactly two dangling vertices")
         raise err
-
+    # If there’s exactly one of each, the face is missing a single edge.
+    # Duplicates one existing edge row
     eptm.edge_df = pd.concat([eptm.edge_df, face_edges.iloc[0:1]], ignore_index=True)
     eptm.edge_df.index.name = "edge"
     new_edge = eptm.edge_df.index[-1]
+    # Reassigns its srce and trgt to connect the dangling vertices
     eptm.edge_df.loc[new_edge, ["srce", "trgt"]] = single_trgt, single_srce
     return new_edge
 
