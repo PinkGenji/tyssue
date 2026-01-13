@@ -23,7 +23,7 @@ def bilayer_draw_spec_update(sheet, specs):
     )
 
     # Update the specs dictionary with the new face colors
-    specs['face']['color'] = sheet.face_df['color']
+    specs['face']['color'] = sheet.face_df['color'].to_numpy()
 
     # Set transparency (alpha) for faces
     specs['face']['alpha'] = 0.2
@@ -37,4 +37,4 @@ def bilayer_draw_spec_update(sheet, specs):
     )
 
     # Update the specs dictionary with the new edge widths
-    specs['edge']['width'] = sheet.edge_df['width']
+    specs['edge']['width'] = sheet.edge_df['width'].to_numpy()
