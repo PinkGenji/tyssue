@@ -10,9 +10,9 @@ from ...topology.sheet_topology import cell_division
 from ...behaviors.sheet.cell_activity_events import fuse_single_cell, stb_detach, stb_extrusion
 
 def cell_cycle_transition(sheet, manager, dt, p_recruit=0.1,
-                          G1_duration=8,
+                          G1_duration= 8,
                           S_duration = 7,
-                          G2_duration=3,
+                          G2_duration= 3,
                           M_duration = 0.5,
                           F_duration = 24,
                           E_duration = 30
