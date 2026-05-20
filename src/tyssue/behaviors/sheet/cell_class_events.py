@@ -8,6 +8,7 @@ import numpy as np
 from ...geometry.planar_geometry import PlanarGeometry
 from ...topology.sheet_topology import cell_division
 from ...behaviors.sheet.cell_activity_events import fuse_single_cell, stb_detach, stb_extrusion
+from ...behaviors.sheet.bilayer_dummy_set import auto_dummy_edges, update_draw_specs
 
 def cell_cycle_transition(sheet, manager, dt, p_recruit=0.1,
                           G1_duration= 8,
@@ -79,4 +80,7 @@ def cell_cycle_transition(sheet, manager, dt, p_recruit=0.1,
         sheet.face_df.loc[unit, 'cell_class'] = 'STB'
         sheet.face_df.loc[unit, 'timer'] = E_duration
 
+    geom.update_all(sheet)
+    auto_dummy_edges(sheet)
+    update_draw_specs(sheet)
     manager.append(cell_cycle_transition, dt = dt, p_recruit = p_recruit,G2_duration = G2_duration, G1_duration = G1_duration)
