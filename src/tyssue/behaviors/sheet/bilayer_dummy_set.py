@@ -2,38 +2,42 @@
 
 from ...config.draw import sheet_spec
 
-def bilayer_dummy_set(sheet):
+def auto_dummy_edges(sheet):
     """
-    Set edges as active or dummy for bilayer tissue sheet.
-
-    Parameters
-    ----------
-    sheet : tyssue.Sheet
-        The tissue sheet instance containing face_df and edge_df DataFrames.
+    Update edge activity based on cell classes.
+    STB-like (STB or E) on both sides are set inactive (dummy edge).
+    Boundary edges and mixed-class edges remain active.
     """
+    sheet.get_extra_indices()
+    # STB-like predicate
+    def is_stb_like(cell_class):
+        return cell_class in ("STB", "E")
 
-    # Iterate through each edge in the edge DataFrame
     for i in sheet.edge_df.index:
-        # Check if the edge has an opposite edge (i.e., it's internal)
-        if sheet.edge_df.loc[i, 'opposite'] != -1:
-            # Get the associated cell (face) for this edge
-            associated_cell = sheet.edge_df.loc[i, 'face']
-            # Get the opposite edge index
-            opposite_edge = sheet.edge_df.loc[i, 'opposite']
-            # Get the opposite cell (face) for the opposite edge
-            opposite_cell = sheet.edge_df.loc[opposite_edge, 'face']
-            # If both associated and opposite cells are of class 'STB', set edge as dummy (inactive)
-            if (sheet.face_df.loc[associated_cell, 'cell_class'] == 'STB' and
-                    sheet.face_df.loc[opposite_cell, 'cell_class'] == 'STB'):
-                sheet.edge_df.loc[i, 'is_active'] = 0
-                sheet.edge_df.loc[opposite_edge, 'is_active'] = 0
-            else:
-                # Otherwise, set edge as active
-                sheet.edge_df.loc[i, 'is_active'] = 1
+        opp = sheet.edge_df.loc[i, "opposite"]
+        # Boundary edges are always active
+        if opp == -1 or opp not in sheet.edge_df.index:
+            sheet.edge_df.loc[i, "is_active"] = 1
+            continue
+        # Faces on each side
+        f1 = sheet.edge_df.loc[i, "face"]
+        f2 = sheet.edge_df.loc[opp, "face"]
+        # If faces disappeared during topology changes then keep active
+        if f1 not in sheet.face_df.index or f2 not in sheet.face_df.index:
+            sheet.edge_df.loc[i, "is_active"] = 1
+            sheet.edge_df.loc[opp, "is_active"] = 1
+            continue
+        c1 = sheet.face_df.loc[f1, "cell_class"]
+        c2 = sheet.face_df.loc[f2, "cell_class"]
+
+        # STB-like on both sides then deactivate
+        if is_stb_like(c1) and is_stb_like(c2):
+            sheet.edge_df.loc[i, "is_active"] = 0
+            sheet.edge_df.loc[opp, "is_active"] = 0
         else:
-            # For boundary edges, set as active
-            sheet.edge_df.loc[i, 'is_active'] = 1
-    print("Bilayer dummy edges have been set based on cell classes.")
+            sheet.edge_df.loc[i, "is_active"] = 1
+            sheet.edge_df.loc[opp, "is_active"] = 1
+    print("Dummy edges updated (STB and E treated identically).")
 
 def update_draw_specs(sheet):
     """
