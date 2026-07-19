@@ -590,6 +590,36 @@ class Epithelium:
         else:
             return None
 
+    def add_element(self, elem):
+        """
+        Create a new vert/edge/face/cell by copying row 0 as a template.
+        Updates unique_id_max and assigns a new unique_id.
+
+        Parameters
+        ----------
+        elem : str
+            One of 'vert', 'edge', 'face', or 'cell'.
+
+        Returns
+        -------
+        new_index : int
+            The index of the newly created element.
+        """
+        df = self.datasets[elem]
+        # Copy template row (index 0)
+        template_row = df.loc[0:0]
+        # Append new row
+        df = pd.concat([df, template_row], ignore_index=True)
+        self.datasets[elem] = df
+        # Increment unique_id_max
+        self.specs[elem]['unique_id_max'] += 1
+        new_uid = self.specs[elem]['unique_id_max']
+        # Assign unique_id to the new row
+        new_index = df.index[-1]
+        self.datasets[elem].loc[new_index, 'unique_id'] = new_uid
+
+        return new_index
+
     def get_neighbors(self, elem_id, elem="cell"):
         """Returns the indexes of the adjacent elements (cells or faces) of
         the element of index `elem_id`.
