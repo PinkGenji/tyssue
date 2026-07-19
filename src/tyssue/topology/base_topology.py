@@ -4,6 +4,7 @@ from itertools import combinations
 
 import numpy as np
 import pandas as pd
+from tyssue.core import sheet
 
 from ..utils.connectivity import face_face_connectivity
 
@@ -417,3 +418,103 @@ def merge_border_edges(sheet, drop_two_sided=True):
 
     sheet.reset_index(order=False)
     sheet.reset_topo()
+
+def v_e_distance(sheet, edge, vert, d_sep):
+    """
+    This function takes a pair of edge and vertex, returns the distance and
+    the potential collision point if the intersection point is between the two ends of the edge.
+    If the there is no potential collision point, then it returns an np.nan
+
+    Parameters
+    ----------
+    sheet : Eptm instance
+
+    edge :
+        ID of the edge.
+    vert :
+        ID of the vertex.
+
+    Returns
+    -------
+    distance: If the closest point is one of the endpoints of the edge,
+    then the distance is defined to be the Euclidean distance between the closer
+    endpoint and the incoming vertex. If the closest point is between the two
+    endpoints, then the distance is the Euclidean distance between the incoming
+    vertex and the point between the endpoints.
+
+    nearest: This is the coordinates of the closest end point of the edge.
+
+    collision_point: This is the cooridnates of the closest collision point within the edge.
+
+    """
+    # Extract the coordinate of the srce and trgt point.
+    edge_end1 = sheet.edge_df.loc[edge, ['srce']]
+    edge_end2 = sheet.edge_df.loc[edge, ['trgt']]
+    end1_position = sheet.vert_df.loc[edge_end1, ['x', 'y']].to_numpy(dtype=float).flatten()
+    end2_position = sheet.vert_df.loc[edge_end2, ['x', 'y']].to_numpy(dtype=float).flatten()
+    # Compute the unit vector from end1 to end2.
+    line = np.round(end2_position - end1_position, 7)
+    line_length = np.round(np.linalg.norm(line), 7)
+    line_unit = line / line_length
+
+    # Now extract the coordinate of the point.
+    point = sheet.vert_df.loc[vert, ['x', 'y']].to_numpy(dtype=float).flatten()
+    # Adjust the coordinate of the point with regards to the end1, then take the unit vector of it.
+    end1_p = np.round(point - end1_position, 7)
+    end1_p_scaled = end1_p / line_length
+
+    # Use dot product to find the closest point between the
+    dot = np.dot(srce_p_scaled, line_unit)
+    if int(vert) not in sheet.vert_df.index:
+        # Vertex was removed by a topology event
+        return np.nan, None
+    elif dot < 0 or dot > 1:
+        # either case indicates that the closest point between the vertex is one of the endpoint of the edge,
+        # which should be left as a case of vertex-vertex collision.
+        return np.nan, np.nan
+    else:
+        # This is the ideal case, the collision point is between end1 and end2.
+        collision_point = end1_position + dot * line_unit
+        distance = np.round(np.linalg.norm(collision_point - point), 7)
+        return distance, collision_point
+
+def v_v_distance(eptm, vertex1, vertex2):
+    """ This is a function that computes the distance between two vertices.
+
+    Parameters
+    eptm: Eptm instance
+    vertex1: positional index of the first vertex in vert_df
+    vertex2: positional index of the second vertex in vert_df
+
+    returns
+    A float value of the distance between the two vertices.
+    """
+    vert_1 = sheet.vert_df.loc[vertex1, ['x', 'y']]
+    vert_2 = sheet.vert_df.loc[vertex2, ['x', 'y']]
+    distance = np.linalg.norm(vert_1 - vert_2)
+    return distance
+
+def third_mutual_vertex(eptm, vertex1, vertex2):
+    """ This is a function that checks if vertex1 and vertex2 are connected with a third vertex via edges
+    Parameters
+    eptm: Eptm instance
+    vertex1: positional index of the first vertex in vert_df
+    vertex2: positional index of the second vertex in vert_df
+
+    returns
+    A boolean value that indicates whether the vertex1 and vertex2 are connected with a third vertex
+    """
+    vertex1_associated_edges = (eptm.edge_df['srce'] == vertex1) | (eptm.edge_df['trgt'] == vertex1)
+    vertex1_associated_verts = eptm.edge_df.loc[vertex1_associated_edges].apply(
+    lambda row: row['trgt'] if row['srce'] == vertex1 else row['srce'],
+    axis=1
+)
+    vertex2_associated_edges = (eptm.edge_df['srce'] == vertex2) | (eptm.edge_df['trgt'] == vertex2)
+    vertex2_associated_verts = eptm.edge_df.loc[vertex2_associated_edges].apply(
+    lambda row: row['trgt'] if row['srce'] == vertex2 else row['srce'],
+    axis=1
+)
+    # Check for mutual vertex
+    mutual = set(vertex1_associated_verts) & set(vertex2_associated_verts)
+    return len(mutual) > 0
+
