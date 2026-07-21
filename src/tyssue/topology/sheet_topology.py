@@ -290,10 +290,10 @@ def boundary_ids(sheet):
     boundary_vert_ids = sheet.vert_df.loc[boundary_verts,"unique_id"].tolist()
     return boundary_edge_ids, boundary_vert_ids
 
-def edge_uid_to_pos(uid):
+def edge_uid_to_pos(sheet, uid):
     return sheet.edge_df.index[sheet.edge_df["unique_id"] == uid][0]
 
-def vert_uid_to_pos(uid):
+def vert_uid_to_pos(sheet, uid):
     return sheet.vert_df.index[sheet.vert_df["unique_id"] == uid][0]
 
 
@@ -318,11 +318,11 @@ def T3_transition(eptm,boundary_vertices, boundary_edges, length_threshold, mult
     vertex_edge_pairs = []
     vertex_vertex_pairs = []
         # Compute vertex-edge distances, we use positional id (pid) for computing distance, but use uid to track items.
-    for first_vertex_uid in boundary_vertices[:]:
-        first_vertex_pid = vert_uid_to_pos(first_vertex_uid)
+    for first_vertex_uid in boundary_vertices:
+        first_vertex_pid = vert_uid_to_pos(eptm, first_vertex_uid)
         for first_edge_uid in boundary_edges:
             # convert to positional id in df.
-            first_edge_pid = edge_uid_to_pos(first_edge_uid)
+            first_edge_pid = edge_uid_to_pos(eptm, first_edge_uid)
             # Utilize the faces_by_srce df, skip checking if the vertex and edge are from the same face.
             if eptm.edge_df.loc[first_edge_pid,'face'] in faces_by_srce[first_vertex_pid]:
                 continue
@@ -331,13 +331,15 @@ def T3_transition(eptm,boundary_vertices, boundary_edges, length_threshold, mult
                 if distance < length_threshold:
                     vertex_edge_pairs.append((first_vertex_uid, first_edge_uid, collision_point))
                     boundary_vertices.remove(first_vertex_uid)
+                else:
+                    continue
 
         # Compute vertex-vertex distances for the rest of the boundary vertices.
     for i, first_vertex_uid in enumerate(boundary_vertices):
-        first_vertex_pid = vert_uid_to_pos(first_vertex_uid)
+        first_vertex_pid = vert_uid_to_pos(eptm, first_vertex_uid)
         for second_vertex_uid in boundary_vertices[i + 1:]:
             # convert to positional id in the df
-            second_vertex_pid = vert_uid_to_pos(second_vertex_uid)
+            second_vertex_pid = vert_uid_to_pos(eptm, second_vertex_uid)
             # Based on their positional id, and the faces_by_srce df, skip checking vertices from the same face.
             common_v = [x for x in faces_by_srce[first_vertex_pid] if x in faces_by_srce[second_vertex_pid]]
             if not common_v: # go ahead if the common_v is an empty list. 'an empty list has a False boolean value'
@@ -346,7 +348,8 @@ def T3_transition(eptm,boundary_vertices, boundary_edges, length_threshold, mult
                     vertex_vertex_pairs.append((first_vertex_uid, second_vertex_uid))
             else: # if the common_v is not an empty list, then they are vertices of a face, skip checking.
                 continue
-
+    print('vertex_edge_pairs: ', vertex_edge_pairs)
+    print('vertex_vertex_pairs: ', vertex_vertex_pairs)
     # We first look at the vertex_vertex list, there are two cases.
     # Case 1: if the pair shares mutual vertex, that means they are from two adjacent cells,
     # we need to extend the existing edge by creating a new vertex at the mid-point between vert-vert pair, and use
@@ -355,8 +358,8 @@ def T3_transition(eptm,boundary_vertices, boundary_edges, length_threshold, mult
     for pairs in vertex_vertex_pairs:
         first_vertex_uid = pairs[0]
         second_vertex_uid = pairs[1]
-        first_vertex_pid = vert_uid_to_pos(first_vertex_uid)
-        second_vertex_pid = vert_uid_to_pos(second_vertex_uid)
+        first_vertex_pid = vert_uid_to_pos(eptm, first_vertex_uid)
+        second_vertex_pid = vert_uid_to_pos(eptm, second_vertex_uid)
         if third_mutual_vertex(eptm, first_vertex_pid, second_vertex_pid):
             # Case 1 situation, first add a new vertex in the vert_df with middle location between two vertices. Then update edge_df.
             new_vert = eptm.add_element('vert')
@@ -385,14 +388,14 @@ def T3_transition(eptm,boundary_vertices, boundary_edges, length_threshold, mult
     # Lastly we deal with the edge-vertex pairs. For each pair, we use the closest point as an imaginary point, then create
     # two vertices that are each d_sep away from the imaginary collision point.
     for pairs in vertex_edge_pairs:
-        incoming_vertex_pid = vert_uid_to_pos(pairs[0])
-        collide_edge_pid = edge_uid_to_pos(pairs[1])
+        incoming_vertex_pid = vert_uid_to_pos(eptm, pairs[0])
+        collide_edge_pid = edge_uid_to_pos(eptm, pairs[1])
         collision_coord = pairs[2]
         # From the collision point coordiates, computes the coordinates for the two new vertices.
         # Utilize the edge dataframe, for each edge, 'ux,uy' column is the unit vector from srce to trgt.
         srce_trgt_unit_vector = eptm.edge_df.loc[collide_edge_pid,["ux","uy"]]
         # Extract all rows of edges that has either srce or trgt as the incoming vertex.
-        connected = sheet.edge_df[sheet.edge_df["trgt"].isin(incoming_vertex_pid)|sheet.edge_df["srce"].isin(incoming_vertex_pid)]
+        connected = eptm.edge_df[(eptm.edge_df["trgt"] == incoming_vertex_pid)|(eptm.edge_df["srce"] == incoming_vertex_pid)]
         connected_index = connected.index
             # Add two new rows in the vert_df
         new_vert_1 = eptm.add_element('vert')
@@ -401,14 +404,17 @@ def T3_transition(eptm,boundary_vertices, boundary_edges, length_threshold, mult
         eptm.vert_df.loc[new_vert_1, eptm.coords] = collision_coord - d_sep * srce_trgt_unit_vector
         eptm.vert_df.loc[new_vert_2, eptm.coords] = collision_coord + d_sep * srce_trgt_unit_vector
         # Rewire the edges based on the extracted index previously.
-        # The first asscoiated vertex is reconnected to the new vertex 1
-        sheet.edge_df.loc[connected_index[0]] = connected.iloc[0].replace(
+        # The first asscoiated vertex is reconnected to the new vertex 1, all the rest reconnects to the new vertex 2.
+        # Note: for loc and iloc, double square bracket returns a new dataframe, single bracket gives a series.
+        first = connected.iloc[[0]].replace(
             {"srce": incoming_vertex_pid, "trgt": incoming_vertex_pid}, new_vert_1
         )
-        # all the rest reconnects to the new vertex 2.
-        sheet.edge_df.loc[connected_index[1:]] = connected.iloc[1:].replace(
-            {"srce": incoming_vertex_pid, "trgt": incoming_vertex_pid}, new_vert_1
+        rest = connected.iloc[1:].replace(
+            {"srce": incoming_vertex_pid, "trgt": incoming_vertex_pid}, new_vert_2
         )
+        eptm.edge_df.loc[connected_index[0]] = first.iloc[0]
+        eptm.edge_df.loc[connected_index[1:]] = rest
+
 
 
 
