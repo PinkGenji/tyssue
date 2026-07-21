@@ -464,7 +464,7 @@ def v_e_distance(sheet, edge, vert, d_sep):
     end1_p_scaled = end1_p / line_length
 
     # Use dot product to find the closest point between the
-    dot = np.dot(srce_p_scaled, line_unit)
+    dot = np.dot(end1_p_scaled, line_unit)
     if int(vert) not in sheet.vert_df.index:
         # Vertex was removed by a topology event
         return np.nan, None
@@ -478,7 +478,7 @@ def v_e_distance(sheet, edge, vert, d_sep):
         distance = np.round(np.linalg.norm(collision_point - point), 7)
         return distance, collision_point
 
-def v_v_distance(eptm, vertex1, vertex2):
+def v_v_distance(sheet, vertex1, vertex2):
     """ This is a function that computes the distance between two vertices.
 
     Parameters
