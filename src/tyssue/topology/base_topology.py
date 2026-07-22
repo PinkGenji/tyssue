@@ -36,10 +36,7 @@ def split_vert(sheet, vert, face, to_rewire, epsilon, recenter=False):
     logger.debug("splitting vertex %d", vert)
 
     # Add a vertex
-    this_vert = sheet.vert_df.loc[vert:vert]  # avoid type munching
-    sheet.vert_df = pd.concat([sheet.vert_df, this_vert], ignore_index=True)
-
-    new_vert = sheet.vert_df.index[-1]
+    new_vert = sheet.add_element("vert")
     # Move it towards the face center
     r_ia = sheet.face_df.loc[face, sheet.coords] - sheet.vert_df.loc[vert, sheet.coords]
     shift = r_ia * epsilon / np.linalg.norm(r_ia)
@@ -59,7 +56,7 @@ def split_vert(sheet, vert, face, to_rewire, epsilon, recenter=False):
     )
 
 
-def add_vert(eptm, edge):
+def add_vert(eptm, edge,coords=None):
     """Adds a vertex in the middle of the edge,
 
     which is split as is its opposite(s)
@@ -111,24 +108,29 @@ def add_vert(eptm, edge):
         (eptm.edge_df["srce"] == srce) & (eptm.edge_df["trgt"] == trgt)
     ]
 
-    new_vert = eptm.vert_df.loc[srce:srce]
-    eptm.vert_df = pd.concat([eptm.vert_df, new_vert], ignore_index=True)
-    new_vert = eptm.vert_df.index[-1]
-    eptm.vert_df.loc[new_vert, eptm.coords] = eptm.vert_df.loc[
-        [srce, trgt], eptm.coords
-    ].mean(numeric_only=True)
+    new_vert = eptm.add_element("vert")
+    if coords is None:
+        eptm.vert_df.loc[new_vert, eptm.coords] = eptm.vert_df.loc[
+            [srce, trgt], eptm.coords
+        ].mean(numeric_only=True)
+    else:
+        eptm.vert_df.loc[new_vert, eptm.coords] = coords
 
     eptm.edge_df.loc[parallels.index, "trgt"] = new_vert
-    eptm.edge_df = pd.concat([eptm.edge_df, parallels], ignore_index=True)
-    new_edges = eptm.edge_df.index[-parallels.index.size :]
+    new_edges = []
+    for i in parallels.index:
+        new_edge = eptm.add_element("edge")
+        new_edges.append(new_edge)
+
     eptm.edge_df.loc[new_edges, "srce"] = new_vert
     eptm.edge_df.loc[new_edges, "trgt"] = trgt
 
     new_opp_edges = []
     if len(opposites.index):
         eptm.edge_df.loc[opposites.index, "srce"] = new_vert
-        eptm.edge_df = pd.concat([eptm.edge_df, opposites], ignore_index=True)
-        new_opp_edges = eptm.edge_df.index[-opposites.index.size :]
+        new_opp_edges = []
+        for i in opposites.index:
+            new_opp_edges.append(eptm.add_element("edge"))
         eptm.edge_df.loc[new_opp_edges, "trgt"] = new_vert
         eptm.edge_df.loc[new_opp_edges, "srce"] = trgt
 
@@ -164,10 +166,8 @@ def close_face(eptm, face):
         print("Closing only possible with exactly two dangling vertices")
         raise err
     # If there’s exactly one of each, the face is missing a single edge.
-    # Duplicates one existing edge row
-    eptm.edge_df = pd.concat([eptm.edge_df, face_edges.iloc[0:1]], ignore_index=True)
-    eptm.edge_df.index.name = "edge"
-    new_edge = eptm.edge_df.index[-1]
+    # add one existing edge row
+    new_edge = eptm.add_element("edge")
     # Reassigns its srce and trgt to connect the dangling vertices
     eptm.edge_df.loc[new_edge, ["srce", "trgt"]] = single_trgt, single_srce
     return new_edge
