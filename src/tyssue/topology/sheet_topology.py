@@ -287,11 +287,12 @@ def boundary_ids(sheet):
     """
     Takes an edge_df, creates a tuple of boundary edge indices and a tuple of boundary vertices indices.
     The function returns a tuple of the two indices tuples.
+    First we create a set of boundary elements, then we convert them back to a list for operations in T3
     """
     boundary_edges = sheet.edge_df[sheet.edge_df['opposite'] == -1].index
-    boundary_edge_ids = set(sheet.edge_df.loc[boundary_edges, "unique_id"].tolist())
+    boundary_edge_ids = list(set(sheet.edge_df.loc[boundary_edges, "unique_id"].tolist()))
     boundary_verts = sheet.edge_df.loc[boundary_edges,'srce'].values
-    boundary_vert_ids = set(sheet.vert_df.loc[boundary_verts,"unique_id"].tolist())
+    boundary_vert_ids = list(set(sheet.vert_df.loc[boundary_verts,"unique_id"].tolist()))
     return boundary_edge_ids, boundary_vert_ids
 
 def edge_uid_to_pos(sheet, uid):
