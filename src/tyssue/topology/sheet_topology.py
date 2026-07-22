@@ -289,9 +289,9 @@ def boundary_ids(sheet):
     The function returns a tuple of the two indices tuples.
     """
     boundary_edges = sheet.edge_df[sheet.edge_df['opposite'] == -1].index
-    boundary_edge_ids = sheet.edge_df.loc[boundary_edges, "unique_id"].tolist()
+    boundary_edge_ids = set(sheet.edge_df.loc[boundary_edges, "unique_id"].tolist())
     boundary_verts = sheet.edge_df.loc[boundary_edges,'srce'].values
-    boundary_vert_ids = sheet.vert_df.loc[boundary_verts,"unique_id"].tolist()
+    boundary_vert_ids = set(sheet.vert_df.loc[boundary_verts,"unique_id"].tolist())
     return boundary_edge_ids, boundary_vert_ids
 
 def edge_uid_to_pos(sheet, uid):
