@@ -209,9 +209,13 @@ def face_division(sheet, mother, vert_a, vert_b):
     new_edge_m = sheet.add_element('edge')
     sheet.edge_df.loc[new_edge_m, "srce"] = vert_b
     sheet.edge_df.loc[new_edge_m, "trgt"] = vert_a
+
     new_edge_d = sheet.add_element('edge')
     sheet.edge_df.loc[new_edge_d, "srce"] = vert_a
     sheet.edge_df.loc[new_edge_d, "trgt"] = vert_b
+
+    sheet.edge_df.loc[new_edge_m, "face"] = mother
+    sheet.edge_df.loc[new_edge_d, "face"] = mother
 
     # ## Discover daughter edges
     m_data = sheet.edge_df[sheet.edge_df["face"] == mother]
@@ -397,12 +401,12 @@ def T3_transition(eptm,boundary_vertices, boundary_edges, length_threshold, mult
         # Extract all rows of edges that has either srce or trgt as the incoming vertex.
         connected = eptm.edge_df[(eptm.edge_df["trgt"] == incoming_vertex_pid)|(eptm.edge_df["srce"] == incoming_vertex_pid)]
         connected_index = connected.index
-            # Add two new rows in the vert_df
-        new_vert_1 = eptm.add_element('vert')
-        new_vert_2 = eptm.add_element('vert')
-        # Update the correct coordinates to the new vertices.
-        eptm.vert_df.loc[new_vert_1, eptm.coords] = collision_coord - d_sep * srce_trgt_unit_vector
-        eptm.vert_df.loc[new_vert_2, eptm.coords] = collision_coord + d_sep * srce_trgt_unit_vector
+        # Compute the correct coordinates to the new vertices.
+        new_vert1_coord = collision_coord - d_sep * srce_trgt_unit_vector
+        new_vert2_coord = collision_coord + d_sep * srce_trgt_unit_vector
+            # Add two new vertices on the collding edge
+        new_vert_1, new_edge1, new_oedge_1 = add_vert(eptm, collide_edge_pid, new_vert1_coord)
+        new_vert_2, new_edge2, new_oedge_2 = add_vert(eptm, collide_edge_pid, new_vert2_coord)
         # Rewire the edges based on the extracted index previously.
         # The first asscoiated vertex is reconnected to the new vertex 1, all the rest reconnects to the new vertex 2.
         # Note: for loc and iloc, double square bracket returns a new dataframe, single bracket gives a series.
