@@ -608,7 +608,7 @@ class Epithelium:
         df = self.datasets[elem]
         # Copy template row (index 0)
         if copy_row is None:
-            template_row = df.loc[0:0]
+            template_row = df.iloc[0:1]
         else:
             template_row = df.loc[copy_row:copy_row]
         # Append new row
