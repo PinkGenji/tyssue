@@ -204,7 +204,7 @@ def face_division(sheet, mother, vert_a, vert_b):
     daughter = int(sheet.add_element('face', mother))
 
     # Create two new edges in edge_df.
-    copy_edge_row = sheet.edge_df[sheet.edge_df["face"] == mother].iloc[0:1]
+    copy_edge_row = sheet.edge_df[sheet.edge_df["face"] == mother].index[0]
     new_edge_m = int(sheet.add_element('edge', copy_edge_row))
     sheet.edge_df.loc[new_edge_m, "srce"] = vert_b
     sheet.edge_df.loc[new_edge_m, "trgt"] = vert_a
