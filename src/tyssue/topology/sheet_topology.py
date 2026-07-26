@@ -200,22 +200,19 @@ def face_division(sheet, mother, vert_a, vert_b):
     indexed by `edge_a` and `edge_b`, splitting it
     in the middle of those edes.
     """
-    # mother = sheet.edge_df.loc[edge_a, 'face']
+    # Create a new face in face_df.
+    daughter = int(sheet.add_element('face', mother))
 
-    face_cols = sheet.face_df.loc[mother:mother]
-
-    daughter = int(sheet.add_element('face'))
-
+    # Create two new edges in edge_df.
+    copy_edge_row = sheet.edge_df[sheet.edge_df["face"] == mother].iloc[0:1]
+    int(sheet.add_element('edge', copy_edge_row))
     new_edge_m = sheet.add_element('edge')
     sheet.edge_df.loc[new_edge_m, "srce"] = vert_b
     sheet.edge_df.loc[new_edge_m, "trgt"] = vert_a
 
-    new_edge_d = sheet.add_element('edge')
+    new_edge_d = int(sheet.add_element('edge', copy_edge_row))
     sheet.edge_df.loc[new_edge_d, "srce"] = vert_a
     sheet.edge_df.loc[new_edge_d, "trgt"] = vert_b
-
-    sheet.edge_df.loc[new_edge_m, "face"] = mother
-    sheet.edge_df.loc[new_edge_d, "face"] = mother
 
     # ## Discover daughter edges
     m_data = sheet.edge_df[sheet.edge_df["face"] == mother]
