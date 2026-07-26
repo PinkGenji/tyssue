@@ -590,7 +590,7 @@ class Epithelium:
         else:
             return None
 
-    def add_element(self, elem):
+    def add_element(self, elem,copy_row = None):
         """
         Create a new vert/edge/face/cell by copying row 0 as a template.
         Updates unique_id_max and assigns a new unique_id.
@@ -607,7 +607,10 @@ class Epithelium:
         """
         df = self.datasets[elem]
         # Copy template row (index 0)
-        template_row = df.loc[0:0]
+        if copy_row is None:
+            template_row = df.loc[0:0]
+        else:
+            template_row = df.loc[copy_row:copy_row]
         # Append new row
         df = pd.concat([df, template_row], ignore_index=True)
         self.datasets[elem] = df
