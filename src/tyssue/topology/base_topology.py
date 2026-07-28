@@ -108,7 +108,7 @@ def add_vert(eptm, edge,coords=None):
         (eptm.edge_df["srce"] == srce) & (eptm.edge_df["trgt"] == trgt)
     ]
 
-    new_vert = eptm.add_element("vert")
+    new_vert = eptm.add_element("vert",srce)
     if coords is None:
         eptm.vert_df.loc[new_vert, eptm.coords] = eptm.vert_df.loc[
             [srce, trgt], eptm.coords
@@ -119,7 +119,7 @@ def add_vert(eptm, edge,coords=None):
     eptm.edge_df.loc[parallels.index, "trgt"] = new_vert
     new_edges = []
     for i in parallels.index:
-        new_edge = eptm.add_element("edge")
+        new_edge = eptm.add_element("edge",i)
         new_edges.append(new_edge)
 
     eptm.edge_df.loc[new_edges, "srce"] = new_vert
@@ -130,7 +130,9 @@ def add_vert(eptm, edge,coords=None):
         eptm.edge_df.loc[opposites.index, "srce"] = new_vert
         new_opp_edges = []
         for i in opposites.index:
-            new_opp_edges.append(eptm.add_element("edge"))
+            new_opp_edges.append(eptm.add_element("edge", i))
+        # update the the srce of pre-existing opposite edge with new_vert.
+        eptm.edge_df.loc[opposites.index, "srce"] = new_vert
         eptm.edge_df.loc[new_opp_edges, "trgt"] = new_vert
         eptm.edge_df.loc[new_opp_edges, "srce"] = trgt
 
