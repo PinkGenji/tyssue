@@ -493,6 +493,17 @@ def fuse_single_cell(sheet, F_cell, d_min):
         - isolated STB cells,
         - broken bilayer structure,
         - simulation crashes.
+    A cell fusion behaviour function is used when a CT is fusing into the STB layer. The cell class of the selection cell
+    should become "STB" at the end of the function.
+    First, the shared STB edges that share a vertex on the F cells identified.
+
+    Secondly, split STB shared vertices that on the outer surface and create separated edges.
+
+    Thirdly, split vertex shared by STBs and CT, creating a new CT edge.
+
+    Fourthly, F class cell transition to STB class.
+
+    Lastly, new dynamic parameters need to be updated to ensure consistent physics rule.
 
     Parameters
     ----------
