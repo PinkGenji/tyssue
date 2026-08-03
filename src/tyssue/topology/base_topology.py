@@ -11,7 +11,7 @@ from ..utils.connectivity import face_face_connectivity
 logger = logging.getLogger(name=__name__)
 
 
-def split_vert(sheet, vert, face, to_rewire, epsilon, recenter=False):
+def split_vert(sheet, vert, face, to_rewire, epsilon, recenter=True):
     """Creates a new vertex and moves it towards the center of face.
 
     The edges in to_rewire will be connected to the new vertex.
@@ -36,7 +36,7 @@ def split_vert(sheet, vert, face, to_rewire, epsilon, recenter=False):
     logger.debug("splitting vertex %d", vert)
 
     # Add a vertex
-    new_vert = sheet.add_element("vert")
+    new_vert = sheet.add_element("vert",vert)
     # Move it towards the face center
     r_ia = sheet.face_df.loc[face, sheet.coords] - sheet.vert_df.loc[vert, sheet.coords]
     shift = r_ia * epsilon / np.linalg.norm(r_ia)
@@ -169,7 +169,7 @@ def close_face(eptm, face):
         raise err
     # If there’s exactly one of each, the face is missing a single edge.
     # add one existing edge row
-    new_edge = eptm.add_element("edge")
+    new_edge = eptm.add_element("edge",face_edges.index[0])
     # Reassigns its srce and trgt to connect the dangling vertices
     eptm.edge_df.loc[new_edge, ["srce", "trgt"]] = single_trgt, single_srce
     return new_edge
@@ -258,20 +258,6 @@ def collapse_edge(sheet, edge, reindex=True, allow_two_sided=False):
 
     logger.debug("collapsing edge %d", edge)
     srce, trgt = np.sort(sheet.edge_df.loc[edge, ["srce", "trgt"]]).astype(int)
-
-    # edges = sheet.edge_df[
-    #     ((sheet.edge_df["srce"] == srce) & (sheet.edge_df["trgt"] == trgt))
-    #     | ((sheet.edge_df["srce"] == trgt) & (sheet.edge_df["trgt"] == srce))
-    # ]
-
-    # has_3_sides = np.any(
-    #     sheet.face_df.loc[edges["face"].astype(int), "num_sides"] < 4
-    # )
-    # if has_3_sides and not allow_two_sided:
-    #     warnings.warn(
-    #         f"Collapsing edge {edge} would result in a two sided face, aborting"
-    #     )
-    #     return -1
 
     sheet.vert_df.loc[srce, sheet.coords] = sheet.vert_df.loc[
         [srce, trgt], sheet.coords
