@@ -85,6 +85,7 @@ def type1_transition(sheet, edge01, *, do_reindex =True, remove_tri_faces=True, 
     srce, trgt, face = sheet.edge_df.loc[edge01, ["srce", "trgt", "face"]].astype(int)
 
     vert = min(srce, trgt)  # find the vertex that won't be reindexed
+    # The edge is collapsed into the srce index at the midpoint of the edge.
     ret_code = collapse_edge(sheet, edge01, reindex=do_reindex, allow_two_sided=True)
     if ret_code < 0:
         warnings.warn(f"Collapse of edge {edge01} failed")
@@ -424,6 +425,20 @@ def face_vertices(sheet, face_id):
     verts = list(edges['srce']) + list(edges['trgt'])
     return list(set(verts))
 
+def mutual_edges(sheet, fA, fB):
+    df = sheet.edge_df
+    # Faces of each half-edge
+    f1 = df['face']
+    # Faces of opposite half-edges (use reindex to align)
+    f2 = df['opposite'].replace(-1, pd.NA)
+    f2 = f2.map(lambda opp: df.loc[opp, 'face'] if pd.notna(opp) else pd.NA)
+    # Boolean mask: edges whose two faces are exactly {fA, fB}
+    mask = ((f1 == fA) & (f2 == fB)) | ((f1 == fB) & (f2 == fA))
+    # Unique edges: keep only e < opposite(e)
+    unique_mask = df.index < df['opposite']
+    return df.index[mask & unique_mask].tolist()
+
+
 def find_local_stb_stb_edge(sheet, F_cell):
     """
     Find the ONE STB–STB mutual edge such that:
@@ -432,33 +447,22 @@ def find_local_stb_stb_edge(sheet, F_cell):
     Only loops over sheet.sgle_edges.
     Returns a single integer edge index, or None.
     """
-    # Vertices of the F cell (force into Python ints)
-    F_vertices = list(map(int, face_vertices(sheet, F_cell)))
+    # Vertices of the F cell
+    F_vertices = face_vertices(sheet, F_cell)
     # STB neighbours of F_cell
     neighbours = sheet.get_neighbors(F_cell)
-    stb_neigh = [int(n) for n in neighbours if sheet.face_df.loc[n, 'cell_class'] == 'STB']
+    stb_neigh = [n for n in neighbours if sheet.face_df.loc[n, 'cell_class'] == 'STB']
     # Loop ONLY over unique edges
-    sheet.get_extra_indices()
-    for e in sheet.sgle_edges:
-        f1 = sheet.edge_df.loc[e, 'face']
-        opp = int(sheet.edge_df.loc[e, 'opposite'])
-        if opp == -1:
-            continue
-        f2 = int(sheet.edge_df.loc[opp, 'face'])
-        # Condition 1: both faces are STB neighbours of F_cell
-        if f1 not in stb_neigh or f2 not in stb_neigh:
-            continue
-        # Condition 2: edge touches the F cell
-        v1 = int(sheet.edge_df.loc[e, 'srce'])
-        v2 = int(sheet.edge_df.loc[e, 'trgt'])
-        if v1 in F_vertices or v2 in F_vertices:
-            return e  # return immediately
-    return None
+    mutual_edge_between_stb = mutual_edges(sheet,stb_neigh[0],stb_neigh[1])
+    if mutual_edge_between_stb is None:
+        return None
+    else:
+        return mutual_edge_between_stb[0] # As it should be a list of one edge index, just return the index integer.
 
 
 def identify_edge_endpoints(sheet, F_cell, indirect_edge):
     """
-    For each edge in local_edges, determine:
+    For each edge in the cell, determine:
     - which endpoint belongs to the F cell
     - which endpoint belongs to the STB neighbour
     Returns a list: [STB_vertex, F_vertex]
@@ -474,7 +478,7 @@ def identify_edge_endpoints(sheet, F_cell, indirect_edge):
     # Return None if neither vertex belongs to the F cell (should not happen if preconditions are met)
     return None
 
-def fuse_single_cell(sheet, F_cell, tau_F):
+def fuse_single_cell(sheet, F_cell, d_min):
     """
     Attempt to fuse a CT cell (now in class 'F') into the STB layer.
 
@@ -514,13 +518,14 @@ def fuse_single_cell(sheet, F_cell, tau_F):
     # If we reach here, it means the geometry is ready for fusion. Do full geometric operation to fuse the cell.
     unique_id = sheet.face_df.loc[F_cell,'unique_id']
     stb_face = sheet.edge_df.loc[sse, 'face']
-    stbv, fv = identify_edge_endpoints(sheet, F_cell, sse)
-    base_split(sheet, stbv, stb_face, sheet.edge_df[sheet.edge_df['face'] == stb_face], epsilon=1, recenter=True)
-    new_edge = split_vert(sheet, fv, F_cell)[0]
+    # We know we want to perform change on the edge with index sse, but we need to know which endpoint belongs to the fusing cell.
+    sse_ends = sheet.edge_df.loc[sse, ['srce','trgt']].values.astype(int).tolist()
+    vertices_in_fusing_cell = face_vertices(sheet, F_cell)
+    fv = next(v for v in sse_ends if v in vertices_in_fusing_cell)
+    stbv = next(v for v in sse_ends if v not in vertices_in_fusing_cell)
+    base_split_vert(sheet, stbv, stb_face, sheet.edge_df[sheet.edge_df['face'] == stb_face], epsilon=d_min, recenter=True)
+    new_edge = split_vert(sheet, fv,F_cell)[0]
     new_edge = type1_transition(sheet, new_edge, do_reindex=True, remove_tri_faces=False, multiplier=5)
-    # sheet.face_df.loc[F_cell, 'cell_class'] = 'STB'
-    # sheet.face_df.loc[F_cell,'timer'] = 0 # As a fresh STB unit, reset the timer to 0.
-    geom.update_all(sheet)
     return unique_id
 
 def stb_extrusion(sheet, cell_id):
