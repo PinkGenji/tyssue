@@ -586,9 +586,9 @@ def update_edge_tension(sheet, default_tension):
         if opp == -1:
             # Boundary edges
             if cell_class in ['STB', 'E']:
-                tension = default_tension / 25
+                tension = default_tension * 2 / 25
             else:
-                tension = default_tension
+                tension = default_tension * 2
             sheet.edge_df.loc[i, 'line_tension'] = tension
             continue
 
