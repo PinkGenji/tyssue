@@ -552,45 +552,64 @@ def stb_extrusion(sheet, cell_id):
         collapse_edge(sheet, edge_id, reindex=False)
     sheet.reset_index(order=False)
 
-def auto_dummy_edges(sheet,default_tension):
+
+def update_edge_activation(sheet):
+    for i in sheet.edge_df.index:
+        opp = sheet.edge_df.loc[i, 'opposite']
+
+        # Boundary edges always active
+        if opp == -1:
+            sheet.edge_df.loc[i, 'is_active'] = 1
+            continue
+
+        # Check both faces
+        f1 = sheet.edge_df.loc[i, 'face']
+        f2 = sheet.edge_df.loc[opp, 'face']
+        c1 = sheet.face_df.loc[f1, 'cell_class']
+        c2 = sheet.face_df.loc[f2, 'cell_class']
+
+        is_stb_like_1 = c1 in ['STB', 'E']
+        is_stb_like_2 = c2 in ['STB', 'E']
+
+        # Dummy edges disabled only when both sides are STB-like
+        active = not (is_stb_like_1 and is_stb_like_2)
+        sheet.edge_df.loc[i, 'is_active'] = int(active)
+        sheet.edge_df.loc[opp, 'is_active'] = int(active)
+
+
+def update_edge_tension(sheet, default_tension):
+    for i in sheet.edge_df.index:
+        opp = sheet.edge_df.loc[i, 'opposite']
+        cell_index = sheet.edge_df.loc[i, 'face']
+        cell_class = sheet.face_df.loc[cell_index, 'cell_class']
+
+        if opp == -1:
+            # Boundary edges
+            if cell_class in ['STB', 'E']:
+                tension = default_tension / 25
+            else:
+                tension = default_tension
+            sheet.edge_df.loc[i, 'line_tension'] = tension
+            continue
+
+        # Non-boundary edges: normal tension
+        sheet.edge_df.loc[i, 'line_tension'] = default_tension
+        sheet.edge_df.loc[opp, 'line_tension'] = default_tension
+
+
+
+def auto_dummy_edges(sheet, default_tension, only_dummy = True):
     """
     This function goes through the edge dataframe, and does two things: enable dummy or basement attach effect, and
     restore values if an edge is no longer any of the two mentioned.
 
     """
+    if only_dummy:
+        update_edge_activation(sheet)
+    else:
+        update_edge_tension(sheet, default_tension)
+    print("Dummy edges and basement updated.")
 
-    for i in sheet.edge_df.index:
-        opp, cell_index = sheet.edge_df.loc[i, ['opposite','face']]
-        cell_class = sheet.face_df.loc[cell_index,'cell_class']
-        # Boundary edge, always active
-        if opp == -1 and cell_class in ['STB','E']:
-            sheet.edge_df.loc[i, 'is_active'] = 1
-            sheet.edge_df.loc[i, 'line_tension'] = default_tension * 2
-            continue
-        elif opp == -1 and cell_class not in ['STB','E']:
-            sheet.edge_df.loc[i, 'is_active'] = 1
-            sheet.edge_df.loc[i,'line_tension'] = default_tension * 20
-            continue
-        else:
-            # Check faces on both sides of the edge
-            f1 = sheet.edge_df.loc[i, 'face']
-            f2 = sheet.edge_df.loc[opp, 'face']
-            # Treat E exactly like STB
-            c1 = sheet.face_df.loc[f1, 'cell_class']
-            c2 = sheet.face_df.loc[f2, 'cell_class']
-            is_stb_like_1 = (c1 == 'STB') or (c1 == 'E')
-            is_stb_like_2 = (c2 == 'STB') or (c2 == 'E')
-            if is_stb_like_1 and is_stb_like_2:
-                # Disable dummy edge
-                sheet.edge_df.loc[i, 'is_active'] = 0
-                sheet.edge_df.loc[opp, 'is_active'] = 0
-            else:
-                # Enable normal edge
-                sheet.edge_df.loc[i, 'is_active'] = 1
-                sheet.edge_df.loc[i, 'line_tension'] = default_tension
-                sheet.edge_df.loc[opp, 'is_active'] = 1
-                sheet.edge_df.loc[opp, 'line_tension'] = default_tension
-    print('Dummy edges and basement updated based on current cell classes.')
 
 
 
