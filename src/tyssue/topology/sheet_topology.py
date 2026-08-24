@@ -577,6 +577,31 @@ def update_edge_activation(sheet):
         sheet.edge_df.loc[opp, 'is_active'] = int(active)
 
 
+def stb_detach(sheet, geom, cell_id):
+    if cell_id not in sheet.face_df.index:
+        return
+    sheet.get_extra_indices()
+    while True:
+        internal_edges = sheet.edge_df[(sheet.edge_df['face'] == cell_id) & (sheet.edge_df['opposite'] != -1)]
+        did_t1 = False
+        for edge_id in internal_edges.index:
+            opposite_edge_id = internal_edges.loc[edge_id, 'opposite']
+            opposite_cell = sheet.edge_df.loc[opposite_edge_id, 'face']
+            if sheet.face_df.loc[opposite_cell, 'cell_class'] == 'STB' or sheet.face_df.loc[opposite_cell, 'cell_class'] == 'E':
+                continue
+            else:
+                print(f'processing edge {edge_id} for detachment of cell {cell_id}. ')
+                collapse_edge(sheet, edge_id, reindex=True)
+                geom.update_all(sheet)
+                sheet.reset_index(order=False)
+                did_t1 = True
+                break
+        if not did_t1:
+            break
+
+
+
+
 def update_edge_tension(sheet, default_tension):
     for i in sheet.edge_df.index:
         opp = sheet.edge_df.loc[i, 'opposite']
@@ -586,9 +611,9 @@ def update_edge_tension(sheet, default_tension):
         if opp == -1:
             # Boundary edges
             if cell_class in ['STB', 'E']:
-                tension = default_tension * 2 / 25
-            else:
                 tension = default_tension * 2
+            else:
+                tension = default_tension * 2 *10
             sheet.edge_df.loc[i, 'line_tension'] = tension
             continue
 
