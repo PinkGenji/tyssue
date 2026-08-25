@@ -426,17 +426,19 @@ def face_vertices(sheet, face_id):
     return list(set(verts))
 
 def mutual_edges(sheet, fA, fB):
-    df = sheet.edge_df
-    # Faces of each half-edge
-    f1 = df['face']
-    # Faces of opposite half-edges (use reindex to align)
-    f2 = df['opposite'].replace(-1, pd.NA)
-    f2 = f2.map(lambda opp: df.loc[opp, 'face'] if pd.notna(opp) else pd.NA)
-    # Boolean mask: edges whose two faces are exactly {fA, fB}
-    mask = ((f1 == fA) & (f2 == fB)) | ((f1 == fB) & (f2 == fA))
-    # Unique edges: keep only e < opposite(e)
-    unique_mask = df.index < df['opposite']
-    return df.index[mask & unique_mask].tolist()
+    """
+    Given two face indices, fA and fB, return the edge indices that are shared between them.
+    """
+    # Generate edge df for each face
+    edge_dfA = sheet.edge_df[sheet.edge_df['face'] == fA]
+    edge_dfB = sheet.edge_df[sheet.edge_df['face'] == fB]
+
+    # An edge is mutual if it appears in edge_dfA's index and edge_dfB's opposite list.
+    dfA_index = edge_dfA.index.tolist()
+    dfB_opposite = edge_dfB.opposite.tolist()
+
+    mutual_edges = list(set(dfA_index).intersection(dfB_opposite))
+    return mutual_edges
 
 
 def find_local_stb_stb_edge(sheet, F_cell):
@@ -452,7 +454,7 @@ def find_local_stb_stb_edge(sheet, F_cell):
     # STB neighbours of F_cell
     neighbours = sheet.get_neighbors(F_cell)
     stb_neigh = [n for n in neighbours if sheet.face_df.loc[n, 'cell_class'] == 'STB']
-    # Loop ONLY over unique edges
+    # Find mutual edges
     mutual_edge_between_stb = mutual_edges(sheet,stb_neigh[0],stb_neigh[1])
     if mutual_edge_between_stb is None:
         return None
@@ -613,7 +615,7 @@ def update_edge_tension(sheet, default_tension):
             if cell_class in ['STB', 'E']:
                 tension = default_tension * 2
             else:
-                tension = default_tension * 2 *10
+                tension = default_tension * 2 * 10
             sheet.edge_df.loc[i, 'line_tension'] = tension
             continue
 
@@ -621,7 +623,13 @@ def update_edge_tension(sheet, default_tension):
         sheet.edge_df.loc[i, 'line_tension'] = default_tension
         sheet.edge_df.loc[opp, 'line_tension'] = default_tension
 
-
+def update_prefered_area(sheet,default_prefered_area, multiplier):
+    for i in sheet.face_df.index:
+        cell_class = sheet.face_df.loc[i, 'cell_class']
+        if cell_class in ['STB','E']:
+            sheet.face_df.loc[i,'prefered_area'] = default_prefered_area * multiplier
+        else:
+            sheet.face_df.loc[i,'prefered_area'] = default_prefered_area
 
 def auto_dummy_edges(sheet, default_tension, only_dummy = True):
     """
